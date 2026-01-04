@@ -1,100 +1,93 @@
-﻿# Speech-to-Gesture (Realtime / Light)
+# Speech_to_Gesture
 
-日本語の簡潔かつ実用的なREADMEです。ここではローカル環境でのセットアップ、実行方法、含まれるファイルの説明、トラブルシューティングをまとめています。
+## 概要
+Real-time avatar gesture generation using HuBERT audio features.
 
-**プロジェクト概要**
-- 音声入力（マイクまたは音声ファイル）からリアルタイムでジェスチャ（BVH/FKベース）を推論可視化するための軽量推論コードと学習済みモデルを含みます。
-- 学習用の大規模データやトレーニングパイプラインは含まれていません。推論用途に特化しています。
+音声入力からHuBERTの特徴量を抽出し、LSTMPモデルによってリアルタイムで生成されるアバタージェスチャー（2D/3D）を生成して可視化します。
+すぐに簡単に試せるようにジェスチャーボーンはmatplotlibで映し出していますがUnity等で動かす方がはるかに軽量です。
+デフォルトで内蔵カメラを使用するようにしています。
 
-**特徴**
-- マイク入力からのリアルタイム推論と可視化（2D/3D）
-- 軽量な LSTMP 推論モデルを同梱（推論向けに最適化）
-- 最小構成での実行を想定（依存は requirements.txt に記載）
+## ディレクトリ構成
+- `src/` — 実行用スクリプト: `s2g_2d.py`, `s2g_3d.py`, `download_model.py`
+- `models/` — 独自で学習させた学習済みLSTMPモデル
+- `data/` — BVHなどのデータファイル（`wayne_skeleton.bvh`）
 
-**同梱ファイル（主なもの）**
-- [Speech_to_Gesture/s2g_2d.py](Speech_to_Gesture/s2g_2d.py)  2D 表示用のリアルタイム推論スクリプト（マイク入力音声特徴モデル2D可視化）
-- [Speech_to_Gesture/s2g_3d.py](Speech_to_Gesture/s2g_3d.py)  3D 表示用（簡易的な FK 表示）
-- [Speech_to_Gesture/lstmp.pt](Speech_to_Gesture/lstmp.pt)  推論に使う学習済みモデル（バイナリ）
-- [Speech_to_Gesture/wayne_skeleton.bvh](Speech_to_Gesture/wayne_skeleton.bvh)  軽量スケルトン（HIERARCHY のみ）
-- [Speech_to_Gesture/download_model.py](Speech_to_Gesture/download_model.py)  モデルをダウンロードする簡易スクリプト
-- [Speech_to_Gesture/README.md](Speech_to_Gesture/README.md)  このファイル
+## 特徴
+- リアルタイム音声からジェスチャーを生成するパイプライン
+- 2D/3D の可視化オプションどちらでもお選びください
+- 実行中に処理遅延を計測するベンチ表示（BENCH）機能があります
 
-（ワークスペース上位にも類似のスクリプトやモデルが存在する場合があります。ルート直下のファイルと混同しないよう注意してください。）
+## 必要条件
+- Python 3.9+ 推奨
+- 主な依存パッケージ: `torch`, `transformers`, `sounddevice`, `matplotlib`, `numpy`
+- 詳細はプロジェクトルートの `requirements.txt` を参照してください。
 
-**前提 / 必要条件**
-- OS: Windows / macOS / Linux（GUI 描画のため matplotlib のバックエンドに依存）
-- Python 3.8+
-- 必要パッケージは [requirements.txt](../requirements.txt) を参照してインストールしてください。
+## 使い方
+1. 仮想環境を作成して有効化:
 
-推奨セットアップ例（仮想環境）:
-
-```powershell
+```bash
 python -m venv .venv
-.\\.venv\\Scripts\\Activate.ps1   # PowerShell
-python -m pip install -U pip
-python -m pip install -r requirements.txt
+# Windows PowerShell
+.venv\\Scripts\\Activate.ps1
+pip install -r requirements.txt
 ```
 
-**使い方（基本）**
-1. モデルファイルを配置する
-- [Speech_to_Gesture/lstmp.pt](Speech_to_Gesture/lstmp.pt) をこのディレクトリに置くか、適切なパスに配置します。ファイルがリポジトリに無い場合は配布元からダウンロードしてください。
+2. 学習済みモデルを `models/` に配置（例: ダウンロードスクリプトを使用）:
 
-2. モデルをダウンロードする（簡易スクリプト）
-
-```powershell
-python Speech_to_Gesture/download_model.py --url "https://example.com/path/to/lstmp.pt" --out Speech_to_Gesture/lstmp.pt
+```bash
+python src/download_model.py --url <MODEL_URL> --out models/lstmp.pt
 ```
 
-注意: private/認証が必要なホスティング（Hugging Face private, Google Drive 共有など）はこのスクリプトではそのまま動かない可能性があります。その場合は `huggingface_hub` などの専用ツールを使ってください。
+3. 2D 実行（リアルタイム）:
 
-3. 2D 表示で動かす（マイク入力）:
-
-```powershell
-python Speech_to_Gesture/s2g_2d.py
+```bash
+python src/s2g_2d.py
 ```
 
-音声ファイルを入力して推論したい場合（スクリプトがファイル入力に対応している前提）:
+4. 3D 実行:
 
-```powershell
-python Speech_to_Gesture/s2g_2d.py --audio path\to\example.wav
+```bash
+python src/s2g_3d.py
 ```
 
-（スクリプトがコマンドライン引数を受け取らない場合は、`s2g_2d.py` 内の入力設定を編集してファイル入力に切り替えてください。）
+## 各パラメータの説明
+以下の変数は `src/s2g_2d.py` と `src/s2g_3d.py` の250行付近にあり、値を変更して即座に挙動を試せます。ご自由に触ってください。
 
-4. 3D 表示で動かす（マイク入力）:
+- `chunk_sec` — 1チャンクの長さ（秒）: 小さくすると遅延が下がるが入力情報が減少。例: 0.05〜0.3。
+- `hubert_win_sec` — HuBERT に渡すウィンドウ長（秒）: 長くすると文脈が増え滑らかだが遅延が増加。例: 0.5〜2.0。
+- `fps_motion` — モーションの内部フレームレート: 高いと詳細だが計算量が増加。例: 15〜60（通常30）。
+- `take_frames` / `T_win` — モデルに渡すフレーム数: 多いと一度に多く生成するが遅延・負荷増。
+- `ema_alpha` — EMA の係数（0.0〜1.0）: 値が小さいほど最新の反応が優先（応答速いがジッタあり）、大きいほど過去を重視して滑らかに。ただしかなり重くなります。もっさり感をなくしたいならば0推奨です。
+	- 例: クイックに反応したい場合 `ema_alpha = 0.0`、滑らかさ優先なら `0.7`〜`0.95`。
+- `mic_sr` — マイクのサンプリングレート（入力 SR）: スクリプトは内部で16kにリサンプリングするため高SRはリサンプリングコストが増える。
+- `block_sec` / `chunk_len` / `win_len` — コールバックやバッファ長: 小さくするとI/O回数が増えるが遅延は下がる。
+- `audio_q` の `maxsize` — 入力キューのサイズ: 小さいと古いチャンクが捨てられやすく最新優先に。大きいとバックログが生じやすい。
+- `enable_bench` — ベンチ計測を有効にするか: `False` にすると計測ログを止める（わずかなオーバーヘッド削減）。
+- `device` 判定（`cuda` の有無） — GPU が使えると `hubert` / `model` の処理が大幅に高速化されます。
 
-```powershell
-python Speech_to_Gesture/s2g_3d.py
-```
+### チューニング例
+- 低遅延: `chunk_sec=0.05`, `hubert_win_sec=0.5`, `ema_alpha=0.0`, `fps_motion=30`
 
-**スケルトンと出力**
-- 出力は BVH 互換のフォーマット（ジョイント角度等）を想定しており、簡易 FK 表示で可視化されます。
-- スケルトン定義は [Speech_to_Gesture/wayne_skeleton.bvh](Speech_to_Gesture/wayne_skeleton.bvh) を参照してください。
+## BENCH（ベンチマーク）について
+スクリプト実行中に各処理段階の経過時間が表示されます。出力は次の順序です:
 
-**Windows 固有の注意点**
-- PowerShell で仮想環境を有効化する際は実行ポリシーのために次を実行する必要がある場合があります（管理者として実行しないでください。必要ならポリシーを一時的に変更してください）:
+- `get`: キュー/入力からチャンク取得にかかる時間
+- `resample`: 16kHz へのリサンプリング時間
+- `hubert`: HuBERT 特徴抽出の時間
+- `model`: LSTMP 推論時間
+- `post`: 正規化・角度変換・キュー格納などの後処理時間
+- `total`: エンドツーエンドの合計遅延
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\\.venv\\Scripts\\Activate.ps1
-```
+終了時（`q`キー）に平均値が表示されます。計測を無効化するにはソース内の `enable_bench = False` に変更してください。ctrl^cでも停止できます。
 
-- matplotlib の GUI（TkAgg 等）を使う場合、Windows に Tk がインストールされていないとエラーになります。`python -m pip install tk` で試すか、Python の配布に同梱されている Tk を有効にしてください。
-- マイクアクセスの許可: Windows 設定でアプリのマイクアクセスが無効だと入力が取れません。設定 > プライバシー > マイク でターミナル/コンソールアプリのアクセスを許可してください。
-- オーディオデバイスが複数ある場合、スクリプト内で入力デバイスを明示的に指定してください（`sounddevice` 等を使っている場合、`device` 引数を設定する必要があります）。
+## 注意事項
+- `models/` と `data/` は大きなバイナリを含むため通常はリポジトリに含めません（`.gitignore` に登録済み）。
+- GPUが利用可能ならPyTorchが自動的にGPUを使いますが、環境とドライバの整備が必要です。
+- 本リポジトリは研究紹介用のプロトタイプ版です。現在更なる軽量化と自然さの両立を進めています。研究資産故、今後も完全版ではなくプロトタイプ版を公開していく予定です。ただし研究発表後に完全版を公開するかもしれません。
+- 最初に記述していますがmatplotlibではなくUnity等で動かす方が動作はより滑らかになります。
 
-**注意トラブルシューティング（共通）**
-- GUI が表示されない／matplotlib のバックエンドエラーが出る場合は、環境変数や matplotlib のバックエンドを調整してください（例: `MPLBACKEND=TkAgg`）。
-- モデルロード時にメモリ不足が起きる場合は、CPU 実行に切り替えるか、軽量なモデルを使ってください。
+## ライセンス
+MIT License — 詳細はリポジトリルートの `LICENSE` を参照してください。
 
-**開発メモ / カスタマイズ**
-- 音声特徴抽出（例: HuBERT 等） モデル  ポストプロセッシング の流れです。各段階を差し替えて実験できます。
-- 推論のレイテンシ計測やベンチマークはスクリプト内の BENCH 表示（あれば）を利用してください。
-
-**貢献ライセンス**
-- 本リポジトリは研究/実験用途向けです。商用利用や再配布は同梱のライセンス表記に従ってください。必要であればライセンスファイルを追加してください。
-- バグ報告や機能追加は Issues を立ててください。プルリク歓迎です。
-
----
-
-その他、README に追記してほしい実行例（特定のコマンドライン引数、Hugging Face 連携、音声ファイルでのバッチ推論手順など）があれば教えてください。
+## その他
+Issue と Pull Request を歓迎しています。問題や改善提案は GitHub 上で提出してください。
